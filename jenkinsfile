@@ -1,21 +1,59 @@
-#!/bin/bash
+pipeline {
+    agent any
+    environment {
+        DOCKER_VERSION = 'latest'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/votre-utilisateur/projet-devops.git'
+            }
+        }
 
-# Met à jour les paquets et installe les dépendances
-sudo apt-get update -y
-sudo apt-get install -y ca-certificates curl gnupg lsb-release
+        stage('Install Docker (si nécessaire)') {
+            steps {
+                script {
+                    def dockerInstalled = sh(script: 'which docker || true', returnStdout: true).trim()
+                    if (!dockerInstalled) {
+                        echo 'Docker non installé, installation en cours...'
+                        sh '''
+                            sudo apt update
+                            sudo apt install -y \
+                                ca-certificates \
+                                curl \
+                                gnupg \
+                                lsb-release
 
-# Ajoute la clé Docker
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+                            sudo mkdir -p /etc/apt/keyrings
+                            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-# Ajoute le dépôt Docker
-echo \
-"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+                            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-# Mise à jour et installation de Docker
-sudo apt-get update -y
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+                            sudo apt update
+                            sudo apt install -y docker-ce docker-ce-cli containerd.io
+                        '''
+                    } else {
+                        echo 'Docker est déjà installé.'
+                    }
+                }
+            }
+        }
 
-# Vérifie que Docker est bien installé
-docker --version
+        stage('Test Docker') {
+            steps {
+                sh 'docker --version'
+                sh 'docker run hello-world'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline exécuté avec succès !"
+        }
+        failure {
+            echo "Une erreur est survenue."
+        }
+    }
+}
+
