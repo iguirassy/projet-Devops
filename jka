@@ -1,0 +1,33 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                deleteDir()
+            }
+        }
+
+        stage('Clone Repository') {
+            steps {
+                git 'https://github.com/votre-utilisateur/projet-devops.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def dockerfile = """
+                    FROM ubuntu:latest
+                    RUN apt-get update && apt-get install -y apache2 net-tools iproute2 iputils-ping nano ssh && apt-get clean
+                    COPY . /var/www/html
+                    CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
+                    """
+
+                    writeFile file: 'Dockerfile', text: dockerfile
+                    sh 'docker build -t myapache-image .'
+                }
+            }
+        }
+    }
+}
