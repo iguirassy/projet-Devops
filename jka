@@ -1,19 +1,16 @@
 pipeline {
     agent any
-
     stages {
         stage('Clean Workspace') {
             steps {
                 deleteDir()
             }
         }
-
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                git 'https://github.com/iguirassy/projet-devops.git'
+                git branch: 'main', url: 'https://github.com/iguirassy/projet-devops.git'
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 script {
@@ -23,7 +20,6 @@ pipeline {
                     COPY . /var/www/html
                     CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
                     """
-
                     writeFile file: 'Dockerfile', text: dockerfile
                     sh 'docker build -t myapache-image .'
                 }
